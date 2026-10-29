@@ -1,6 +1,9 @@
 
 import { useState, type FormEvent } from 'react'
-import type { Employee } from './Employees'
+import type {
+  Employee,
+  EmployeeAvailability,
+} from './Employees'
 import { getTranslations, type Language } from '../i18n'
 
 export type Shift = {
@@ -43,6 +46,8 @@ const scheduleTranslations = {
     unknownEmployee: 'Unknown employee',
     weeklySchedule: "Manage your team's weekly working schedule.",
     noEmployees: 'Add an employee before creating a shift.',
+    unavailableDay: 'This employee is not available on the selected day.',
+    unavailableHours: 'This shift is outside the employee’s available working hours.',
   },
   pl: {
     addShift: 'Dodaj zmianę',
@@ -66,6 +71,8 @@ const scheduleTranslations = {
     unknownEmployee: 'Nieznany pracownik',
     weeklySchedule: 'Zarządzaj tygodniowym grafikiem zespołu.',
     noEmployees: 'Dodaj pracownika przed utworzeniem zmiany.',
+    unavailableDay: 'Ten pracownik jest niedostępny w wybranym dniu.',
+    unavailableHours: 'Zmiana wykracza poza dostępne godziny pracy pracownika.',
   },
   uk: {
     addShift: 'Додати зміну',
@@ -89,6 +96,8 @@ const scheduleTranslations = {
     unknownEmployee: 'Невідомий працівник',
     weeklySchedule: 'Керуйте тижневим графіком команди.',
     noEmployees: 'Додайте працівника перед створенням зміни.',
+    unavailableDay: 'Цей працівник недоступний у вибраний день.',
+    unavailableHours: 'Зміна виходить за межі доступного робочого часу працівника.',
   },
 }
 
@@ -108,6 +117,65 @@ function getMonday(date: Date): Date {
   result.setHours(0, 0, 0, 0)
 
   return result
+}
+
+function loadAvailability(): EmployeeAvailability {
+  try {
+    const saved = localStorage.getItem('smartstaff-availability')
+    if (!saved) return {}
+
+    const parsed: unknown = JSON.parse(saved)
+
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
+      return {}
+    }
+
+    return parsed as EmployeeAvailability
+  } catch {
+    return {}
+  }
+}
+
+function getAvailabilityError(
+  employeeId: number,
+  date: string,
+  startTime: string,
+  endTime: string,
+  availability: EmployeeAvailability,
+  messages: typeof scheduleTranslations.en
+): string | null {
+  const employeeAvailability = availability[employeeId]
+
+  // Employees without saved availability have no restrictions.
+  if (!employeeAvailability) return null
+
+  const selectedDate = new Date(`${date}T12:00:00`)
+
+  if (Number.isNaN(selectedDate.getTime())) return null
+
+  // JavaScript: Sunday = 0, Monday = 1.
+  // Availability: Monday = 0, Sunday = 6.
+  const dayIndex = (selectedDate.getDay() + 6) % 7
+  const dayAvailability = employeeAvailability[dayIndex]
+
+  if (!dayAvailability) return null
+
+  if (!dayAvailability.available) {
+    return messages.unavailableDay
+  }
+
+  if (
+    startTime < dayAvailability.startTime ||
+    endTime > dayAvailability.endTime
+  ) {
+    return messages.unavailableHours
+  }
+
+  return null
 }
 
 function Schedule({
@@ -202,7 +270,9 @@ function Schedule({
       return
     }
 
-    if (!employees.some((person) => person.id === Number(employeeId))) {
+    const selectedEmployeeId = Number(employeeId)
+
+    if (!employees.some((person) => person.id === selectedEmployeeId)) {
       setError(s.selectEmployee)
       return
     }
@@ -212,8 +282,25 @@ function Schedule({
       return
     }
 
+    // Read the latest saved availability before validating.
+    const availability = loadAvailability()
+
+    const availabilityError = getAvailabilityError(
+      selectedEmployeeId,
+      date,
+      startTime,
+      endTime,
+      availability,
+      s
+    )
+
+    if (availabilityError) {
+      setError(availabilityError)
+      return
+    }
+
     const shiftData = {
-      employeeId: Number(employeeId),
+      employeeId: selectedEmployeeId,
       date,
       startTime,
       endTime,
