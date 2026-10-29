@@ -17,6 +17,27 @@ const initialEmployees: Employee[] = [
   { id: 3, name: 'Sofia Wiśniewska', role: 'Manager' },
 ]
 
+const upcomingTranslations = {
+  en: {
+    title: 'Upcoming Shifts',
+    description: 'See the next scheduled shifts for your team.',
+    empty: 'No upcoming shifts scheduled.',
+    viewSchedule: 'View schedule',
+  },
+  pl: {
+    title: 'Nadchodzące zmiany',
+    description: 'Sprawdź najbliższe zaplanowane zmiany zespołu.',
+    empty: 'Brak nadchodzących zmian.',
+    viewSchedule: 'Zobacz grafik',
+  },
+  uk: {
+    title: 'Найближчі зміни',
+    description: 'Перегляньте найближчі заплановані зміни команди.',
+    empty: 'Найближчих змін немає.',
+    viewSchedule: 'Переглянути графік',
+  },
+}
+
 function loadEmployees(): Employee[] {
   try {
     const saved = localStorage.getItem('smartstaff-employees')
@@ -100,6 +121,14 @@ function getShiftHours(shift: Shift): number {
   )
 }
 
+function getShiftStart(shift: Shift): Date {
+  return new Date(`${shift.date}T${shift.startTime}:00`)
+}
+
+function getShiftEnd(shift: Shift): Date {
+  return new Date(`${shift.date}T${shift.endTime}:00`)
+}
+
 function App() {
   const [activePage, setActivePage] = useState('dashboard')
   const [employees, setEmployees] = useState<Employee[]>(loadEmployees)
@@ -108,10 +137,11 @@ function App() {
   const [theme, setTheme] = useState<Theme>(loadTheme)
 
   const t = getTranslations(language)
+  const u = upcomingTranslations[language]
 
   useEffect(() => {
     localStorage.setItem('smartstaff-language', language)
-    document.documentElement.lang = language === 'uk' ? 'uk' : language
+    document.documentElement.lang = language
   }, [language])
 
   useEffect(() => {
@@ -184,7 +214,7 @@ function App() {
     })
   }
 
-  function addShift(shiftData: Omit<Shift, 'id'>) {
+  function addShift(shiftData: Omit<Shift, 'id'>): boolean {
     if (hasShiftConflict(shiftData)) {
       return false
     }
@@ -198,7 +228,7 @@ function App() {
     return true
   }
 
-  function editShift(updatedShift: Shift) {
+  function editShift(updatedShift: Shift): boolean {
     if (
       hasShiftConflict(
         {
@@ -263,6 +293,29 @@ function App() {
     },
   ]
 
+  const now = new Date()
+
+  const upcomingShifts = shifts
+    .filter((shift) => getShiftEnd(shift) >= now)
+    .sort(
+      (a, b) =>
+        getShiftStart(a).getTime() - getShiftStart(b).getTime()
+    )
+    .slice(0, 5)
+
+  const locale =
+    language === 'pl'
+      ? 'pl-PL'
+      : language === 'uk'
+        ? 'uk-UA'
+        : 'en-GB'
+
+  const upcomingDateFormatter = new Intl.DateTimeFormat(locale, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  })
+
   return (
     <div className="app-layout">
       <Sidebar
@@ -291,9 +344,9 @@ function App() {
               }
               aria-label={t.language}
             >
-              <option value="en">🇬🇧 English</option>
-              <option value="pl">🇵🇱 Polski</option>
-              <option value="uk">🇺🇦 Українська</option>
+              <option value="en">English</option>
+              <option value="pl">Polski</option>
+              <option value="uk">Українська</option>
             </select>
 
             <button
@@ -350,7 +403,7 @@ function App() {
                 </div>
 
                 <div className="employee-list">
-                  {employees.slice(0, 3).map((employee) => (
+                  {employees.map((employee) => (
                     <div
                       className="employee-card"
                       key={employee.id}
@@ -369,6 +422,73 @@ function App() {
 
                   {employees.length === 0 && (
                     <p>{t.noEmployees}</p>
+                  )}
+                </div>
+              </section>
+
+              <section className="upcoming-section">
+                <div className="section-header">
+                  <div>
+                    <h2>{u.title}</h2>
+                    <p>{u.description}</p>
+                  </div>
+
+                  <button
+                    onClick={() => setActivePage('schedule')}
+                  >
+                    {u.viewSchedule}
+                  </button>
+                </div>
+
+                <div className="upcoming-list">
+                  {upcomingShifts.length === 0 ? (
+                    <div className="empty-state">
+                      <p>{u.empty}</p>
+                    </div>
+                  ) : (
+                    upcomingShifts.map((shift) => {
+                      const employee = employees.find(
+                        (person) =>
+                          person.id === shift.employeeId
+                      )
+
+                      const shiftDate = new Date(
+                        `${shift.date}T12:00:00`
+                      )
+
+                      return (
+                        <div
+                          className="upcoming-card"
+                          key={shift.id}
+                        >
+                          <div className="upcoming-avatar">
+                            {employee?.name
+                              .charAt(0)
+                              .toUpperCase() ?? '?'}
+                          </div>
+
+                          <div className="upcoming-info">
+                            <strong>
+                              {employee?.name ?? 'Unknown employee'}
+                            </strong>
+
+                            <span>
+                              {employee
+                                ? roleLabel(employee.role, language)
+                                : ''}
+                            </span>
+                          </div>
+
+                          <div className="upcoming-date">
+                            {upcomingDateFormatter.format(shiftDate)}
+                          </div>
+
+                          <div className="upcoming-time">
+                            {shift.startTime} – {shift.endTime}
+                          </div>
+                        </div>
+                      )
+                    })
                   )}
                 </div>
               </section>

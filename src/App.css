@@ -973,3 +973,137 @@ p {
     animation-duration: 0.01ms !important;
   }
 }
+
+/* ========================================
+   DASHBOARD — UPCOMING SHIFTS
+======================================== */
+
+.upcoming-section {
+  margin-top: 32px;
+  min-width: 0;
+}
+
+.upcoming-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.upcoming-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+  padding: 17px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.upcoming-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.upcoming-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.upcoming-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.upcoming-info strong {
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.upcoming-info span {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.upcoming-date {
+  min-width: 115px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.upcoming-time {
+  min-width: 125px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ========================================
+   UPCOMING SHIFTS — RESPONSIVE
+======================================== */
+
+@media (max-width: 700px) {
+  .upcoming-card {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .upcoming-info {
+    flex-basis: calc(100% - 60px);
+  }
+
+  .upcoming-date {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .upcoming-time {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .upcoming-date {
+    flex-basis: 100%;
+  }
+
+  .upcoming-time {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .upcoming-card {
+    transition: none;
+  }
+
+  .upcoming-card:hover {
+    transform: none;
+  }
+}
